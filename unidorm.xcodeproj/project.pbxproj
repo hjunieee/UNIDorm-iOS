@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		291B65A92E65B7F700A9B177 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 291B65A82E65B7F700A9B177 /* FirebaseCore */; };
-		291B65AB2E65B8A400A9B177 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 291B65AA2E65B8A400A9B177 /* FirebaseMessaging */; };
+		291B65E52E65D11200A9B177 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 291B65E42E65D11200A9B177 /* FirebaseCore */; };
+		291B65E72E65D11800A9B177 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 291B65E62E65D11800A9B177 /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,7 +32,7 @@
 		29125F992E65B1D8003CD6B7 /* unidorm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = unidorm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29125FA62E65B1DD003CD6B7 /* unidormTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = unidormTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		29125FB02E65B1DD003CD6B7 /* unidormUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = unidormUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		291B65A72E65B66F00A9B177 /* firebase-ios-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "firebase-ios-sdk"; path = "../firebase-ios-sdk"; sourceTree = "<group>"; };
+		291B65E32E65D07D00A9B177 /* firebase-ios-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = "firebase-ios-sdk"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -71,8 +71,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				291B65AB2E65B8A400A9B177 /* FirebaseMessaging in Frameworks */,
-				291B65A92E65B7F700A9B177 /* FirebaseCore in Frameworks */,
+				291B65E72E65D11800A9B177 /* FirebaseMessaging in Frameworks */,
+				291B65E52E65D11200A9B177 /* FirebaseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +117,7 @@
 		291B65A62E65B66E00A9B177 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				291B65A72E65B66F00A9B177 /* firebase-ios-sdk */,
+				291B65E32E65D07D00A9B177 /* firebase-ios-sdk */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -142,8 +142,8 @@
 			);
 			name = unidorm;
 			packageProductDependencies = (
-				291B65A82E65B7F700A9B177 /* FirebaseCore */,
-				291B65AA2E65B8A400A9B177 /* FirebaseMessaging */,
+				291B65E42E65D11200A9B177 /* FirebaseCore */,
+				291B65E62E65D11800A9B177 /* FirebaseMessaging */,
 			);
 			productName = unidorm;
 			productReference = 29125F992E65B1D8003CD6B7 /* unidorm.app */;
@@ -600,11 +600,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		291B65A82E65B7F700A9B177 /* FirebaseCore */ = {
+		291B65E42E65D11200A9B177 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FirebaseCore;
 		};
-		291B65AA2E65B8A400A9B177 /* FirebaseMessaging */ = {
+		291B65E62E65D11800A9B177 /* FirebaseMessaging */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FirebaseMessaging;
 		};
