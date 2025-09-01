@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
+    // 뷰에서 사용할 웹뷰 URL
+    private let rootUrl = URL(string: "https://unidorm.inuappcenter.kr")!
+
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            WebView(url: rootUrl)
+                .edgesIgnoringSafeArea(.all)
         }
-        .padding()
     }
 }
 
