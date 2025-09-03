@@ -8,14 +8,11 @@
 import SwiftUI
 
 struct ContentView: View {
-    // 뷰에서 사용할 웹뷰 URL
     private let rootUrl = URL(string: "https://unidorm.inuappcenter.kr")!
 
     var body: some View {
-        VStack {
-            WebView(url: rootUrl)
-                .edgesIgnoringSafeArea(.all)
-        }
+        WebView(url: rootUrl)
+            .ignoresSafeArea(edges: .bottom) // ⬅️ 하단 SafeArea만 무시
     }
 }
 

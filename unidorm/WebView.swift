@@ -73,6 +73,9 @@ struct WebView: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
+        
+        // ✅ 뒤로가기 제스처 허용
+        webView.allowsBackForwardNavigationGestures = true
         return webView
     }
 
@@ -95,6 +98,27 @@ struct WebView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "routeChange", let path = message.body as? String {
                 print("📍 React Router 경로 변경 감지:", path)
+                
+                // ✅ 뒤로가기 제스처를 제한할 경로 목록
+                let restrictedPaths: Set<String> = [
+                    "/",
+                    "/home",
+                    "/roommate",
+                    "/groupPurchase",
+                    "/groupPurchase/comingsoon",
+                    "/chat",
+                    "/mypage"
+                ]
+                
+                if restrictedPaths.contains(path) {
+                    message.webView?.allowsBackForwardNavigationGestures = false
+                    print("🚫 뒤로가기 제스처 차단됨 (\(path))")
+                } else {
+                    message.webView?.allowsBackForwardNavigationGestures = true
+                    print("✅ 뒤로가기 제스처 허용됨 (\(path))")
+                }
+                
+                // 로그인 → 홈 이동 시 FCM 처리
                 if previousPath == "/login" && path == "/home" {
                     print("🎉 로그인 완료 후 홈으로 이동 감지됨")
                     self.postFcmTokenAfterLogin(webView: message.webView)
@@ -102,6 +126,7 @@ struct WebView: UIViewRepresentable {
                 previousPath = path
             }
         }
+
         
         // 로그인 성공 후 FCM 토큰 처리
         func postFcmTokenAfterLogin(webView: WKWebView?) {
