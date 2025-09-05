@@ -2,10 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-		<string>fetch</string>
-	</array>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+        <string>fetch</string>
+    </array>
+
+    <!-- 카메라 사용 권한 -->
+    <key>NSCameraUsageDescription</key>
+    <string>이 앱은 사진 촬영을 위해 카메라 접근 권한이 필요합니다.</string>
+
+    <!-- 사진첩 접근 권한 -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>이 앱은 사진 업로드를 위해 사진첩 접근 권한이 필요합니다.</string>
+
+    <!-- 촬영한 사진을 저장할 때 필요 -->
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>이 앱은 촬영한 사진을 저장하기 위해 사진첩 접근 권한이 필요합니다.</string>
 </dict>
 </plist>
