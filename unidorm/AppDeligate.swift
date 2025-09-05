@@ -61,6 +61,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("원격 알림 등록 실패:", error)
     }
+    
+    
 }
 
 // MARK: Firebase Messaging Delegate
