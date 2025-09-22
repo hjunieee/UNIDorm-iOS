@@ -18,10 +18,13 @@ struct ContentView: View {
             if isConnected {
                 WebView(url: rootUrl)
                     .ignoresSafeArea(edges: .bottom)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Color.clear
             }
         }
+
+
         .onAppear { checkNetwork() }
         .alert("네트워크 연결 실패",
                isPresented: $showAlert) {
