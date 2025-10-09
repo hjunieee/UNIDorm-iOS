@@ -171,17 +171,26 @@ struct WebView: UIViewRepresentable {
             DispatchQueue.main.async { webView.window?.rootViewController?.present(alert, animated: true) }
         }
 
-        // MARK: - WKUIDelegate: 새 창 열기 처리 (target="_blank")
-        // 웹페이지가 새 창에서 링크를 열려고 할 때 호출됩니다.
-        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
-                     for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            // 새 창에서 열려는 요청(targetFrame이 nil)이고 URL이 유효하면,
-            if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-                // 앱 내에서 처리하지 않고 외부 브라우저(Safari)에서 열도록 합니다.
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        // MARK: - WKUIDelegate: 새 창 열기 처리
+        func webView(_ webView: WKWebView,
+                     createWebViewWith configuration: WKWebViewConfiguration,
+                     for navigationAction: WKNavigationAction,
+                     windowFeatures: WKWindowFeatures) -> WKWebView? {
+
+            guard let url = navigationAction.request.url else {
+                return nil
             }
-            // 앱 내에 새로운 웹뷰를 만들지 않으므로 nil을 반환합니다.
+
+            // 외부 도메인 -> Safari 열기
+            if !url.absoluteString.contains("unidorm.inuappcenter.kr") {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                return nil
+            }
+
+            // 내부 도메인 -> 현재 웹뷰에서 열기
+            webView.load(URLRequest(url: url))
             return nil
         }
+
     }
 }
