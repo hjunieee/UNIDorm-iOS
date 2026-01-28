@@ -1,196 +1,221 @@
-//
-//  WebView.swift
-//  unidorm
-//
-//  Created by 배현준 on 9/1/25.
-//
 import SwiftUI
 import UIKit
 import WebKit
 import FirebaseMessaging
 
-// MARK: - SwiftUI에서 UIKit의 WKWebView를 사용하기 위한 래퍼(Wrapper) 뷰
 struct WebView: UIViewRepresentable {
-    var url: URL
+    let url: URL
+    
+    // 뒤로가기 제스처가 제한되는 경로 상수화
+    private let restrictedPaths: Set<String> = [
+        "/", "/home", "/roommate", "/groupPurchase",
+        "/groupPurchase/comingsoon", "/chat", "/mypage"
+    ]
 
-    // MARK: - Coordinator 생성
-    // SwiftUI 뷰와 UIKit 뷰 간의 통신을 담당할 Coordinator 객체를 생성합니다.
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
-    // MARK: - UIView 생성 (WKWebView 초기 설정)
-    // 뷰가 처음 생성될 때 호출되며, WKWebView의 초기 구성을 담당합니다.
     func makeUIView(context: Context) -> WKWebView {
-        // --- JavaScript와 Swift 간의 통신 설정 ---
         let contentController = WKUserContentController()
-        // 웹에서 "loginSuccess", "routeChange" 메시지를 보내면 Swift(Coordinator)에서 받을 수 있도록 핸들러를 추가합니다.
+        
+        // 1. 브릿지 핸들러 등록
         contentController.add(context.coordinator, name: "loginSuccess")
         contentController.add(context.coordinator, name: "routeChange")
-
-        // --- 웹페이지 경로 변경 감지를 위한 JavaScript 주입 ---
-        let routeObserverScriptSource = """
-        (function() {
-            // 현재 경로를 Swift로 보내는 함수
-            function notifyPath() {
-                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.routeChange) {
-                    window.webkit.messageHandlers.routeChange.postMessage(window.location.pathname);
-                }
-            }
-            // 브라우저 history 변경 이벤트를 감지하여 notifyPath 함수를 호출
-            window.addEventListener('popstate', notifyPath);
-            window.addEventListener('pushState', notifyPath);
-            window.addEventListener('replaceState', notifyPath);
-            notifyPath(); // 최초 로드 시 경로 전송
-            // pushState, replaceState 이벤트가 기본적으로 없으므로 이벤트를 직접 발생시키는 코드
-            (function(history){
-                var pushState = history.pushState;
-                history.pushState = function(state) {
-                    pushState.apply(history, arguments);
-                    window.dispatchEvent(new Event('pushState'));
-                };
-                var replaceState = history.replaceState;
-                history.replaceState = function(state) {
-                    replaceState.apply(history, arguments);
-                    window.dispatchEvent(new Event('replaceState'));
-                };
-            })(window.history);
-        })();
-        """
-        // 위 스크립트를 웹뷰에 주입하도록 설정
-        let routeObserverScript = WKUserScript(source: routeObserverScriptSource,
-                                               injectionTime: .atDocumentEnd, // 문서 로드가 끝난 후 주입
-                                               forMainFrameOnly: true)
-        contentController.addUserScript(routeObserverScript)
-
-        // --- WKWebView 최종 설정 ---
+        contentController.add(context.coordinator, name: "requestAppUpdate") // ✅ 추가된 브릿지
+        
+        // 2. JS 스크립트 주입 (경로 감지)
+        let script = WKUserScript(source: WebViewScripts.routeObserver,
+                                 injectionTime: .atDocumentEnd,
+                                 forMainFrameOnly: true)
+        contentController.addUserScript(script)
+        
         let config = WKWebViewConfiguration()
-        config.userContentController = contentController // 위에서 설정한 contentController를 적용
-
+        config.userContentController = contentController
+        
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator // 페이지 로드 관련 델리게이트
-        webView.uiDelegate = context.coordinator       // alert, 새 창 열기 등 UI 관련 델리게이트
-        webView.allowsBackForwardNavigationGestures = true // 스와이프로 뒤로/앞으로 가기 제스처 활성화
-        webView.scrollView.isScrollEnabled = true
-        webView.scrollView.contentInsetAdjustmentBehavior = .never // Safe Area에 의해 콘텐츠가 밀리는 현상 방지
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        
         return webView
     }
 
-    // MARK: - UIView 업데이트
-    // SwiftUI 뷰의 상태가 변경될 때 호출되며, WKWebView에 변경사항을 반영합니다.
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        // 전달받은 url로 웹뷰를 로드합니다.
-        uiView.load(URLRequest(url: url))
+        // 이미 로드된 경우 중복 로드 방지 (선택 사항)
+        if uiView.url == nil {
+            uiView.load(URLRequest(url: url))
+        }
     }
 
-    // MARK: - Coordinator 클래스
-    // WKWebView의 델리게이트(Delegate) 역할을 수행하며, 웹뷰의 이벤트를 처리합니다.
-    class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
+    // MARK: - Coordinator
+    class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler, WKDownloadDelegate {
         var parent: WebView
         private var fcmToken: String = ""
         private var isWebViewLoaded: Bool = false
-
+        
         init(_ parent: WebView) {
             self.parent = parent
         }
 
-        // MARK: - (JS -> Swift) JavaScript로부터 메시지 수신
-        // `contentController.add()`로 등록한 핸들러가 호출되는 부분입니다.
+        // JS -> Swift 메시지 처리
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            // 웹뷰의 경로가 변경될 때마다 호출됩니다.
-            if message.name == "routeChange", let path = message.body as? String {
-                print("📍 React Router 경로 변경 감지:", path)
+            switch message.name {
+            case "routeChange":
+                handleRouteChange(message)
+            case "requestAppUpdate":
+                handleAppUpdate(message.webView)
+            case "loginSuccess":
+                print("🔑 로그인 성공 메시지 수신")
+            default:
+                break
+            }
+        }
 
-                // 특정 경로에서는 뒤로가기 제스처를 비활성화합니다.
-                let restrictedPaths: Set<String> = [
-                    "/", "/home", "/roommate", "/groupPurchase",
-                    "/groupPurchase/comingsoon", "/chat", "/mypage"
-                ]
+        // 경로 변경 처리
+        private func handleRouteChange(_ message: WKScriptMessage) {
+            guard let path = message.body as? String else { return }
+            print("📍 경로 변경:", path)
+            message.webView?.allowsBackForwardNavigationGestures = !parent.restrictedPaths.contains(path)
+        }
 
-                if restrictedPaths.contains(path) {
-                    message.webView?.allowsBackForwardNavigationGestures = false
-                } else {
-                    message.webView?.allowsBackForwardNavigationGestures = true
+        // ✅ 앱 최적화(캐시 삭제) 처리
+        private func handleAppUpdate(_ webView: WKWebView?) {
+            AlertHelper.showConfirm(
+                title: "화면 업데이트",
+                message: "로그인 정보는 유지되며, 최신 화면으로 업데이트를 진행합니다."
+            ) { [weak self] in
+                self?.clearCacheAndReload(webView)
+            }
+        }
+
+        // ✅ 세션 유지형 캐시 삭제 로직
+        private func clearCacheAndReload(_ webView: WKWebView?) {
+            // 삭제할 데이터 타입 정의 (쿠키, 로컬스토리지 제외)
+            let dataTypes = Set([WKWebsiteDataTypeMemoryCache, WKWebsiteDataTypeDiskCache])
+            let dateFrom = Date(timeIntervalSince1970: 0)
+            
+            WKWebsiteDataStore.default().removeData(ofTypes: dataTypes, modifiedSince: dateFrom) {
+                DispatchQueue.main.async {
+                    webView?.reload()
+                    print("✅ iOS 캐시 삭제 및 새로고침 완료")
                 }
             }
         }
 
-        // MARK: - FCM 토큰 가져오기
-        private func fetchFcmToken(for webView: WKWebView) {
+        // FCM 토큰 처리
+        private func fetchFcmToken(for webView: WKWebView, retry: Int = 0) {
             Messaging.messaging().token { [weak self] token, error in
-                guard let self = self else { return }
-                if let token = token {
-                    self.fcmToken = token
-                    self.postFcmTokenToWebView(webView) // 토큰을 가져온 후 웹뷰로 전달
-                } else if let error = error {
-                    print("⚠️ FCM 토큰 발급 실패:", error)
+                guard let self = self, let token = token else {
+                    if retry < 3 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self?.fetchFcmToken(for: webView, retry: retry + 1)
+                        }
+                    }
+                    return
                 }
+                self.fcmToken = token
+                self.postToken(webView)
             }
         }
 
-        // MARK: - (Swift -> JS) FCM 토큰을 웹뷰로 전달
-        private func postFcmTokenToWebView(_ webView: WKWebView) {
-            // 웹뷰 로드가 완료되고 FCM 토큰이 있을 때만 실행
+        private func postToken(_ webView: WKWebView) {
             guard isWebViewLoaded, !fcmToken.isEmpty else { return }
-            // 웹페이지의 `window.onReceiveFcmToken` 함수를 호출하여 토큰을 전달
-            let js = "window.onReceiveFcmToken && window.onReceiveFcmToken('\(fcmToken)'); void(0);"
-            webView.evaluateJavaScript(js) { result, error in
-                if let error = error {
-                    print("❌ FCM 토큰 전달 실패:", error)
-                } else {
-                    print("✅ FCM 토큰 웹뷰 전달 완료")
-                    print(self.fcmToken)
-                }
-            }
+            let js = "window.onReceiveFcmToken && window.onReceiveFcmToken('\(fcmToken)');"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
 
-        // MARK: - WKNavigationDelegate: 페이지 로드 완료
-        // 웹페이지 콘텐츠 로드가 완료되었을 때 호출됩니다.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ 페이지 로드 완료:", webView.url?.absoluteString ?? "")
             isWebViewLoaded = true
-            fetchFcmToken(for: webView) // 로드 완료 후 FCM 토큰을 가져와 웹뷰로 전달
+            fetchFcmToken(for: webView)
         }
 
-        // MARK: - WKUIDelegate: JavaScript Alert 처리
-        // 웹페이지의 `alert()` 함수를 네이티브 UIAlertController로 표시합니다.
-        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
-                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
-            let alert = UIAlertController(title: message, message: nil, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "확인", style: .cancel) { _ in completionHandler() })
-            DispatchQueue.main.async { webView.window?.rootViewController?.present(alert, animated: true) }
+        // UI 처리 (Alert, Confirm, 새 창)
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            AlertHelper.showAlert(message: message, completion: completionHandler)
         }
 
-        // MARK: - WKUIDelegate: JavaScript Confirm 처리
-        // 웹페이지의 `confirm()` 함수를 네이티브 UIAlertController로 표시합니다.
-        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
-                     initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
-            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "취소", style: .default) { _ in completionHandler(false) })
-            alert.addAction(UIAlertAction(title: "확인", style: .destructive) { _ in completionHandler(true) })
-            DispatchQueue.main.async { webView.window?.rootViewController?.present(alert, animated: true) }
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            AlertHelper.showConfirm(message: message, completion: completionHandler)
         }
 
-        // MARK: - WKUIDelegate: 새 창 열기 처리
-        func webView(_ webView: WKWebView,
-                     createWebViewWith configuration: WKWebViewConfiguration,
-                     for navigationAction: WKNavigationAction,
-                     windowFeatures: WKWindowFeatures) -> WKWebView? {
-
-            guard let url = navigationAction.request.url else {
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if let url = action.request.url, !url.absoluteString.contains("unidorm.inuappcenter.kr") {
+                UIApplication.shared.open(url)
                 return nil
             }
-
-            // 외부 도메인 -> Safari 열기
-            if !url.absoluteString.contains("unidorm.inuappcenter.kr") {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                return nil
-            }
-
-            // 내부 도메인 -> 현재 웹뷰에서 열기
-            webView.load(URLRequest(url: url))
+            webView.load(action.request)
             return nil
         }
+        
+        // 다운로드 로직은 기존 기능과 동일하게 유지 (생략 가능하나 가독성을 위해 구조 유지 가능)
+        func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+            download.delegate = self
+        }
+        
+        func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+            let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(suggestedFilename)
+            completionHandler(path)
+        }
+        
+        func downloadDidFinish(_ download: WKDownload) {
+            AlertHelper.showAlert(title: "다운로드 완료", message: "파일이 저장되었습니다.")
+        }
+    }
+}
 
+// MARK: - 지원용 구조체 (Scripts & Helpers)
+
+struct WebViewScripts {
+    static let routeObserver = """
+    (function() {
+        function notifyPath() {
+            if (window.webkit?.messageHandlers?.routeChange) {
+                window.webkit.messageHandlers.routeChange.postMessage(window.location.pathname);
+            }
+        }
+        window.addEventListener('popstate', notifyPath);
+        ['pushState', 'replaceState'].forEach(event => {
+            const original = history[event];
+            history[event] = function() {
+                original.apply(this, arguments);
+                notifyPath();
+            };
+        });
+        notifyPath();
+    })();
+    """
+}
+
+struct AlertHelper {
+    static func showAlert(title: String? = nil, message: String, completion: (() -> Void)? = nil) {
+        let alert = UIAlertController(title: title ?? message, message: title == nil ? nil : message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .cancel) { _ in completion?() })
+        present(alert)
+    }
+
+    static func showConfirm(title: String? = nil, message: String, completion: @escaping (Bool) -> Void) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .default) { _ in completion(false) })
+        alert.addAction(UIAlertAction(title: "확인", style: .destructive) { _ in completion(true) })
+        present(alert)
+    }
+    
+    // 오버로딩: 최적화 확인용
+    static func showConfirm(title: String, message: String, onConfirm: @escaping () -> Void) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "확인", style: .default) { _ in onConfirm() })
+        present(alert)
+    }
+
+    private static func present(_ alert: UIAlertController) {
+        DispatchQueue.main.async {
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootVC = scene.windows.first?.rootViewController {
+                rootVC.present(alert, animated: true)
+            }
+        }
     }
 }
