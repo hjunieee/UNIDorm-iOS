@@ -8,7 +8,7 @@ struct WebView: UIViewRepresentable {
     
     // 뒤로가기 제스처가 제한되는 경로 상수화
     private let restrictedPaths: Set<String> = [
-        "/", "/home", "/roommate", "/groupPurchase",
+        "/", "/home", "/roommate","/roommate/my", "/groupPurchase",
         "/groupPurchase/comingsoon", "/chat", "/mypage"
     ]
 
@@ -39,14 +39,14 @@ struct WebView: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         
+        // ✨ [추가] 앱 실행 시 자동 캐시 삭제 후 첫 로드
+        context.coordinator.clearCacheAndLoad(webView, request: URLRequest(url: url))
+        
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        // 이미 로드된 경우 중복 로드 방지 (선택 사항)
-        if uiView.url == nil {
-            uiView.load(URLRequest(url: url))
-        }
+        // 초기 로드는 makeUIView에서 처리하므로 비워둡니다.
     }
 
     // MARK: - Coordinator
@@ -57,6 +57,19 @@ struct WebView: UIViewRepresentable {
         
         init(_ parent: WebView) {
             self.parent = parent
+        }
+
+        // ✨ [추가] 캐시 삭제 후 페이지 로드하는 통합 메서드
+        func clearCacheAndLoad(_ webView: WKWebView, request: URLRequest) {
+            let dataTypes = Set([WKWebsiteDataTypeMemoryCache, WKWebsiteDataTypeDiskCache])
+            let dateFrom = Date(timeIntervalSince1970: 0)
+            
+            WKWebsiteDataStore.default().removeData(ofTypes: dataTypes, modifiedSince: dateFrom) {
+                DispatchQueue.main.async {
+                    webView.load(request)
+                    print("✅ 앱 실행: 캐시 삭제 및 초기 로드 완료")
+                }
+            }
         }
 
         // JS -> Swift 메시지 처리
