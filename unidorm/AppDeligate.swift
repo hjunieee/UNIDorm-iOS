@@ -11,6 +11,9 @@ import FirebaseMessaging
 import UserNotifications
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
+    
+    // 알림 클릭 시 임시 저장될 대상 웹 뷰 라우팅 경로
+    static var pendingRoute: String? = nil
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
@@ -85,6 +88,46 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        print("🔔 알림 터치 수신 (userInfo):", userInfo)
+        
+        var targetPath = ""
+        
+        // 1. 범용 경로 스펙: path 필드가 존재하면 최우선 적용
+        if let path = userInfo["path"] as? String, !path.isEmpty {
+            targetPath = path
+        }
+        // 2. 하위 호환성 스펙: type 및 개별 ID 필드가 올 경우 매핑 적용
+        else if let type = userInfo["type"] as? String {
+            var idString: String? = nil
+            if type == "CHAT" {
+                if let idVal = userInfo["chatRoomId"] as? String {
+                    idString = idVal
+                } else if let idVal = userInfo["chatRoomId"] as? Int {
+                    idString = String(idVal)
+                }
+                if let id = idString {
+                    targetPath = "/chat/\(id)"
+                }
+            } else if type == "NOTICE" {
+                if let idVal = userInfo["noticeId"] as? String {
+                    idString = idVal
+                } else if let idVal = userInfo["noticeId"] as? Int {
+                    idString = String(idVal)
+                }
+                if let id = idString {
+                    targetPath = "/notice/\(id)"
+                }
+            }
+        }
+        
+        if !targetPath.isEmpty {
+            AppDelegate.pendingRoute = targetPath
+            // 이미 화면이 떠 있을 때 바로 네비게이션 시키기 위해 NotificationCenter로 알림을 보냅니다.
+            NotificationCenter.default.post(name: NSNotification.Name("NavigateToRoute"), object: targetPath)
+            print("📍 설정된 대기 라우트 경로:", targetPath)
+        }
+        
         completionHandler()
     }
 }

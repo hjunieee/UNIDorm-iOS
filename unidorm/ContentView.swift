@@ -28,7 +28,7 @@ extension Color {
 struct ContentView: View {
     @Environment(\.colorScheme) var colorScheme // 라이트/다크 모드 감지
     
-    private let rootUrl = URL(string: "https://unidorm.inuappcenter.kr")!
+    private let rootUrl = URL(string: "https://unidorm-test.pages.dev")!
     @State private var showAlert = false
     @State private var isConnected = false
     
