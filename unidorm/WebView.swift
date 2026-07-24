@@ -24,7 +24,8 @@ struct WebView: UIViewRepresentable {
         contentController.add(context.coordinator, name: "routeChange")
         contentController.add(context.coordinator, name: "requestAppUpdate") // ✅ 추가된 브릿지
         contentController.add(context.coordinator, name: "enterDetailView") // ✅ 상세 화면 진입 브릿지 추가
-        
+        contentController.add(context.coordinator, name: "onAppReady") // ✅ React 마운트 완료 신호 브릿지 추가
+
         // 2. JS 스크립트 주입 (경로 감지)
         let script = WKUserScript(source: WebViewScripts.routeObserver,
                                  injectionTime: .atDocumentEnd,
@@ -78,33 +79,24 @@ struct WebView: UIViewRepresentable {
                   let webView = self.webView else { return }
             
             DispatchQueue.main.async {
-                self.navigateToPendingRouteWithRetry(webView: webView, route: path)
+                let navigateJs = "if (window.navigateToPath) { window.navigateToPath('\(path)'); }"
+                webView.evaluateJavaScript(navigateJs, completionHandler: nil)
                 print("📲 NotificationCenter 수신에 의해 라우팅 강제 이동 실행: \(path)")
             }
         }
-        
-        // ✅ 웹앱의 window.navigateToPath 함수가 마운트될 때까지 재시도하며 이동하는 헬퍼 메서드
-        private func navigateToPendingRouteWithRetry(webView: WKWebView, route: String, retryCount: Int = 0) {
-            let checkJs = "typeof window.navigateToPath === 'function' ? 'ready' : 'not_ready'"
-            webView.evaluateJavaScript(checkJs) { [weak self] (result, error) in
-                if let status = result as? String, status == "ready" {
-                    let navigateJs = "window.navigateToPath('\(route)'); void(0);"
-                    webView.evaluateJavaScript(navigateJs) { (_, navigateError) in
-                        if let navigateError = navigateError {
-                            print("❌ [라우팅 실행] evaluateJavaScript 에러:", navigateError.localizedDescription)
-                        } else {
-                            print("✅ [라우팅 실행] JS 실행 및 화면 이동 성공 (경로: \(route))")
-                            AppDelegate.pendingRoute = nil
-                        }
-                    }
+
+        // ✅ React 마운트 완료 신호(onAppReady) 수신 시 즉시 대기중인 딥링크 처리
+        private func handleAppReady() {
+            print("✅ [iOS Ready Signal] React App 마운트 준비 완료 신호 수신!")
+            guard let route = AppDelegate.pendingRoute, let webView = self.webView else { return }
+            AppDelegate.pendingRoute = nil
+            
+            let navigateJs = "if (window.navigateToPath) { window.navigateToPath('\(route)'); }"
+            webView.evaluateJavaScript(navigateJs) { (_, error) in
+                if let error = error {
+                    print("❌ [iOS 딥링크 이동 에러]:", error.localizedDescription)
                 } else {
-                    if retryCount < 30 { // 최대 3초 (100ms * 30) 동안 확인하며 대기
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            self?.navigateToPendingRouteWithRetry(webView: webView, route: route, retryCount: retryCount + 1)
-                        }
-                    } else {
-                        print("⚠️ [라우팅 대기] 실패: 3초 대기했으나 웹앱에 window.navigateToPath가 정의되지 않음")
-                    }
+                    print("✅ [iOS 딥링크 이동 성공] 즉시 이동 경로: \(route)")
                 }
             }
         }
@@ -133,6 +125,8 @@ struct WebView: UIViewRepresentable {
                 print("🔑 로그인 성공 메시지 수신")
             case "enterDetailView":
                 handleEnterDetailView(message)
+            case "onAppReady":
+                handleAppReady()
             default:
                 break
             }
