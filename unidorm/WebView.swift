@@ -9,7 +9,7 @@ struct WebView: UIViewRepresentable {
     // 뒤로가기 제스처가 제한되는 경로 상수화
     private let restrictedPaths: Set<String> = [
         "/", "/home", "/roommate","/roommate/my", "/groupPurchase",
-        "/groupPurchase/comingsoon", "/chat", "/mypage"
+        "/groupPurchase/comingsoon", "/chat", "/mypage", "/complain"
     ]
 
     func makeCoordinator() -> Coordinator {
@@ -22,9 +22,9 @@ struct WebView: UIViewRepresentable {
         // 1. 브릿지 핸들러 등록
         contentController.add(context.coordinator, name: "loginSuccess")
         contentController.add(context.coordinator, name: "routeChange")
-        contentController.add(context.coordinator, name: "requestAppUpdate") // ✅ 추가된 브릿지
-        contentController.add(context.coordinator, name: "enterDetailView") // ✅ 상세 화면 진입 브릿지 추가
-        contentController.add(context.coordinator, name: "onAppReady") // ✅ React 마운트 완료 신호 브릿지 추가
+        contentController.add(context.coordinator, name: "requestAppUpdate") // 추가된 브릿지
+        contentController.add(context.coordinator, name: "enterDetailView") // 상세 화면 진입 브릿지 추가
+        contentController.add(context.coordinator, name: "onAppReady") // React 마운트 완료 신호 브릿지 추가
 
         // 2. JS 스크립트 주입 (경로 감지)
         let script = WKUserScript(source: WebViewScripts.routeObserver,
