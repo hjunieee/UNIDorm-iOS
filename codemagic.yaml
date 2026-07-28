@@ -30,9 +30,8 @@ workflows:
       - name: Build IPA for App Store
         script: |
           xcode-project build-ipa \
-            -project "unidorm.xcodeproj" \
-            -scheme "unidorm" \
-            -derivedDataPath derived_data
+            --project "unidorm.xcodeproj" \
+            --scheme "unidorm"
 
     artifacts:
       - build/ios/ipa/*.ipa
