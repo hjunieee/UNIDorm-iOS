@@ -1,0 +1,18 @@
+workflows:
+  flutter-build:
+    name: Flutter Build
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Flutter build IPAs and APKs
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
