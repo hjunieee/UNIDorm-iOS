@@ -6,29 +6,14 @@ workflows:
     environment:
       xcode: latest
     scripts:
-      - name: Prepare Submodules and Local Packages
-        script: |
-          # 1. 서브모듈 동기화 및 초기화
-          git submodule update --init --recursive
-
-          # 2. 로컬 SPM 패키지(firebase-ios-sdk) 존재 여부 확인 및 복구
-          if [ ! -f "firebase-ios-sdk/Package.swift" ]; then
-            echo "firebase-ios-sdk 패키지를 불러옵니다..."
-            rm -rf firebase-ios-sdk
-            git clone --depth 1 --branch 11.2.0 https://github.com/firebase/firebase-ios-sdk.git firebase-ios-sdk
-          fi
-
       - name: Resolve Swift Package Dependencies
         script: |
-          # SPM 의존성 다운로드 및 해소
           xcodebuild -resolvePackageDependencies \
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
             -derivedDataPath derived_data
-
       - name: Build iOS App
         script: |
-          # 앱 빌드 수행
           xcodebuild build \
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
@@ -38,6 +23,5 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
-
     artifacts:
       - derived_data/Build/Products/**/*.app

@@ -32,7 +32,6 @@
 		29125F992E65B1D8003CD6B7 /* unidorm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = unidorm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		29125FA62E65B1DD003CD6B7 /* unidormTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = unidormTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		29125FB02E65B1DD003CD6B7 /* unidormUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = unidormUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		291B65E32E65D07D00A9B177 /* firebase-ios-sdk */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = "firebase-ios-sdk"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -117,7 +116,6 @@
 		291B65A62E65B66E00A9B177 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				291B65E32E65D07D00A9B177 /* firebase-ios-sdk */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -235,6 +233,9 @@
 				29125F982E65B1D8003CD6B7 /* unidorm */,
 				29125FA52E65B1DD003CD6B7 /* unidormTests */,
 				29125FAF2E65B1DD003CD6B7 /* unidormUITests */,
+			);
+			packageReferences = (
+				291B65E22E65D07D00A9B177 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 		};
 /* End PBXProject section */
@@ -599,13 +600,26 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		291B65E22E65D07D00A9B177 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		291B65E42E65D11200A9B177 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 291B65E22E65D07D00A9B177 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
 		};
 		291B65E62E65D11800A9B177 /* FirebaseMessaging */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 291B65E22E65D07D00A9B177 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
