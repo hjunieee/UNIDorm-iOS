@@ -8,7 +8,10 @@ workflows:
     scripts:
       - name: Resolve Swift Package Dependencies
         script: |
-          xcodebuild -resolvePackageDependencies -project "unidorm.xcodeproj" -scheme "unidorm"
+          xcodebuild -resolvePackageDependencies \
+            -project "unidorm.xcodeproj" \
+            -scheme "unidorm" \
+            -clonedSourcePackagesFolderPath SourcePackages
       - name: Build iOS App
         script: |
           xcodebuild build \
@@ -16,6 +19,7 @@ workflows:
             -scheme "unidorm" \
             -sdk iphoneos \
             -configuration Release \
+            -clonedSourcePackagesFolderPath SourcePackages \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
