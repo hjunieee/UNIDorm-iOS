@@ -197,6 +197,28 @@ struct WebView: UIViewRepresentable {
             }
         }
         
+        // ✅ 대기 중인 라우팅을 리액트 마운트까지 재시도하는 함수
+        private func navigateToPendingRouteWithRetry(webView: WKWebView, route: String, retryCount: Int = 0) {
+            guard retryCount < 10 else {
+                print("⚠️ 라우팅 재시도 실패: window.navigateToPath 가 마운트되지 않음")
+                return
+            }
+            let checkJs = "typeof window.navigateToPath === 'function'"
+            webView.evaluateJavaScript(checkJs) { [weak self] (result, error) in
+                if let isFunction = result as? Bool, isFunction {
+                    let navigateJs = "window.navigateToPath('\(route)');"
+                    webView.evaluateJavaScript(navigateJs) { _, _ in
+                        print("✅ 대기 중인 경로로 라우팅 완료: \(route)")
+                        AppDelegate.pendingRoute = nil
+                    }
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self?.navigateToPendingRouteWithRetry(webView: webView, route: route, retryCount: retryCount + 1)
+                    }
+                }
+            }
+        }
+        
         // ✅ 상세 화면 진입 브릿지 메시지 핸들러
         private func handleEnterDetailView(_ message: WKScriptMessage) {
             guard let body = message.body as? [String: Any] else { return }
