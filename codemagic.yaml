@@ -2,14 +2,10 @@ workflows:
   ios-native-build:
     name: iOS Native Build
     max_build_duration: 60
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     environment:
       xcode: latest
-      cocoapods: default
     scripts:
-      - name: Install CocoaPods dependencies
-        script: |
-          pod install
       - name: Build iOS App
         script: |
           xcodebuild build \
