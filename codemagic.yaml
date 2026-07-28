@@ -6,6 +6,12 @@ workflows:
     environment:
       xcode: latest
     scripts:
+      - name: Fetch Git Submodules
+        script: |
+          git submodule update --init --recursive
+      - name: Resolve Swift Package Dependencies
+        script: |
+          xcodebuild -resolvePackageDependencies -project "unidorm.xcodeproj" -scheme "unidorm"
       - name: Build iOS App
         script: |
           xcodebuild build \
