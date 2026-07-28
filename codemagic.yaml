@@ -8,20 +8,22 @@ workflows:
     scripts:
       - name: Resolve Swift Package Dependencies
         script: |
+          # 의존성 경로 통일
           xcodebuild -resolvePackageDependencies \
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
-            -clonedSourcePackagesFolderPath SourcePackages
+            -derivedDataPath derived_data
       - name: Build iOS App
         script: |
+          # 빌드 경로 통일
           xcodebuild build \
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
             -sdk iphoneos \
             -configuration Release \
-            -clonedSourcePackagesFolderPath SourcePackages \
+            -derivedDataPath derived_data \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
     artifacts:
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/**/*.app
+      - derived_data/Build/Products/**/*.app
