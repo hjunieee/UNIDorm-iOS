@@ -1,10 +1,13 @@
 workflows:
-  ios-native-build:
-    name: iOS Native Build
+  ios-app-store-release:
+    name: iOS App Store Release
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.inuappcenter.unidorm
     scripts:
       - name: Resolve Swift Package Dependencies
         script: |
@@ -12,16 +15,29 @@ workflows:
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
             -derivedDataPath derived_data
-      - name: Build iOS App
+
+      - name: Initialize Keychain & Fetch Signing Files
         script: |
-          xcodebuild build \
+          keychain initialize
+          app-store-connect fetch-signing-files "com.inuappcenter.unidorm" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA for App Store
+        script: |
+          xcode-project build-ipa \
             -project "unidorm.xcodeproj" \
             -scheme "unidorm" \
-            -sdk iphoneos \
-            -configuration Release \
-            -derivedDataPath derived_data \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            -derivedDataPath derived_data
+
     artifacts:
-      - derived_data/Build/Products/**/*.app
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
