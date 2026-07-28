@@ -19,5 +19,9 @@
     <!-- 촬영한 사진을 저장할 때 필요 -->
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>이 앱은 촬영한 사진을 저장하기 위해 사진첩 접근 권한이 필요합니다.</string>
+
+    <!-- 수출 규정 준수 (암호화 서명 사용 안 함) -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>
