@@ -1,18 +1,24 @@
 workflows:
-  flutter-build:
-    name: Flutter Build
-    instance_type: mac_mini_m1
+  ios-native-build:
+    name: iOS Native Build
     max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
-      flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Get Flutter packages
+      - name: Install CocoaPods dependencies
         script: |
-          flutter packages pub get
-      - name: Flutter build IPAs and APKs
+          pod install
+      - name: Build iOS App
         script: |
-          flutter build apk --release
+          xcodebuild build \
+            -project "unidorm.xcodeproj" \
+            -scheme "unidorm" \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/**/*.app
